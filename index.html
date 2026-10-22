@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<title>World Charades</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap">
+<style>
+/* Layout: one column of setup cards with a sticky start bar; each turn takes over the screen in the current card's theme colour */
+:root{
+  --bg:#EEF1F8; --surface:#FFFFFF; --fg:#1B1840; --muted:#5D5A80; --line:#D6DAEA;
+  --accent:#E3324F; --accent-fg:#FFFFFF; --ok:#14935F; --pass:#E9791C;
+  --ok-soft:rgba(20,147,95,.16); --pass-soft:rgba(233,121,28,.16); --stage:#221F4D;
+  --display:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --body:"Nunito Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12112B; --surface:#1C1A42; --fg:#F1F0FF; --muted:#A7A4D2; --line:#312E66;
+  --accent:#FF5470; --ok-soft:rgba(43,200,135,.18); --pass-soft:rgba(255,150,60,.18); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12112B; --surface:#1C1A42; --fg:#F1F0FF; --muted:#A7A4D2; --line:#312E66;
+  --accent:#FF5470; --ok-soft:rgba(43,200,135,.18); --pass-soft:rgba(255,150,60,.18); color-scheme:dark}
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 var(--body)}
+h1,h2,h3{font-family:var(--display);line-height:1.05;text-wrap:balance;margin:0}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,input:focus-visible,textarea:focus-visible,.chip:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+
+.wrap{max-width:720px;margin:0 auto;padding-block:24px 130px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:16px}
+.hero{display:grid;gap:6px;padding-block:8px}
+.hero h1{font-size:clamp(2.7rem,10vw,4.4rem);font-weight:800;letter-spacing:-.01em}
+.hero h1 span{color:var(--accent)}
+.hero p{color:var(--muted);max-width:54ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;display:grid;gap:14px;min-width:0}
+.card h2{font-size:1.5rem;font-weight:700}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.hint{color:var(--muted);font-size:.93rem}
+.label{font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+
+.teams{display:grid;gap:8px}
+.team{display:flex;gap:10px;align-items:center}
+.dot{width:14px;height:14px;border-radius:50%;flex:none}
+input[type=text],textarea{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;color:var(--fg);width:100%;min-width:0}
+textarea{min-height:76px;resize:vertical}
+.icon{border:0;background:transparent;width:38px;height:38px;border-radius:50%;color:var(--muted);flex:none}
+.ghost{border:1.5px dashed var(--line);background:transparent;border-radius:12px;padding:10px 14px;font-weight:700}
+.small{border:1.5px solid var(--line);background:transparent;border-radius:999px;padding:6px 12px;font-weight:700;font-size:.9rem}
+
+.fields{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.field{display:grid;gap:6px;align-content:start}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1.5px solid var(--line);background:transparent;border-radius:999px;padding:7px 14px;font-weight:700;font-variant-numeric:tabular-nums}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.check{display:flex;gap:10px;align-items:flex-start;font-weight:600;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--accent);margin:2px 0 0;flex:none}
+
+.tiltbox{display:grid;gap:10px;padding:12px;border-radius:14px;background:var(--bg)}
+.meter{position:relative;height:46px;border-radius:12px;display:grid;grid-template-columns:28% 1fr 28%;overflow:hidden;border:1px solid var(--line);background:var(--surface)}
+.meter .z{display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;color:var(--muted);transition:background .15s,color .15s}
+.meter .z.p{background:var(--pass-soft)} .meter .z.o{background:var(--ok-soft)}
+.meter .z.p.hit{background:var(--pass);color:#fff} .meter .z.o.hit{background:var(--ok);color:#fff}
+.needle{position:absolute;top:5px;bottom:5px;width:6px;border-radius:3px;background:var(--fg);left:50%;transform:translateX(-50%);transition:left .06s linear}
+#tiltRead{font-variant-numeric:tabular-nums}
+
+.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px}
+.chip{position:relative;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;border:1.5px solid var(--line);font-weight:700;cursor:pointer;user-select:none;min-width:0;transition:background .15s}
+.chip input{position:absolute;opacity:0;pointer-events:none}
+.chip .nm{flex:1;min-width:0;line-height:1.2}
+.chip small{color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
+.chip.on{background:var(--c);border-color:var(--c);color:#fff}
+.chip.on small{color:rgba(255,255,255,.8)}
+
+.how ol{margin:0;padding-left:1.2rem;display:grid;gap:6px}
+.how summary{font-family:var(--display);font-size:1.3rem;font-weight:700;cursor:pointer}
+
+.startbar{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:center;padding:28px max(16px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:linear-gradient(to bottom,transparent,var(--bg) 45%)}
+.primary{background:var(--accent);color:var(--accent-fg);border:0;border-radius:999px;padding:14px 28px;font-family:var(--display);font-size:1.35rem;font-weight:800;width:min(100%,480px)}
+.secondary{background:transparent;border:1.5px solid var(--line);border-radius:999px;padding:12px 22px;font-weight:700}
+
+.turncard{background:var(--tcol);color:#fff;border-radius:22px;padding:26px 22px;display:grid;gap:10px}
+.turncard h2{font-size:clamp(2.4rem,10vw,3.6rem);font-weight:800}
+.turncard .label{color:rgba(255,255,255,.8)}
+.turncard p{max-width:48ch}
+.scores{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.scores li{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;background:var(--bg);font-weight:700}
+.scores li .nm{flex:1;min-width:0;overflow-wrap:anywhere}
+.scores li b{font-family:var(--display);font-size:1.3rem;font-variant-numeric:tabular-nums}
+.scores li.lead{outline:2px solid var(--accent)}
+.btnrow{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+
+.results{display:grid;gap:6px}
+.res{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:transparent;text-align:left;font-weight:700;width:100%}
+.res .w{min-width:0;overflow-wrap:anywhere}
+.res .mk{flex:none;font-size:.85rem;padding:2px 10px;border-radius:999px}
+.res.ok .mk{background:var(--ok-soft);color:var(--ok)}
+.res.no .mk{background:var(--pass-soft);color:var(--pass)}
+.res.no .w{color:var(--muted)}
+.big{font-family:var(--display);font-size:clamp(3rem,14vw,5rem);font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+
+.play{position:fixed;inset:0;z-index:20;background:var(--tc,var(--stage));color:#fff;display:grid;grid-template-rows:auto auto 1fr auto;gap:10px;overflow:hidden;transition:background .3s;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 14px) max(16px,env(safe-area-inset-left,0px))}
+.bar{display:flex;align-items:center;gap:10px}
+.bar .nm{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{background:rgba(0,0,0,.22);border-radius:999px;padding:3px 12px;font-weight:700;font-variant-numeric:tabular-nums}
+.time{font-family:var(--display);font-size:1.9rem;font-weight:800;min-width:2.2ch;text-align:right;font-variant-numeric:tabular-nums;line-height:1}
+.endbtn{border:1.5px solid rgba(255,255,255,.5);background:transparent;border-radius:999px;padding:4px 12px;font-size:.85rem;font-weight:700}
+.timebar{height:8px;background:rgba(255,255,255,.22);border-radius:4px;overflow:hidden}
+.timebar i{display:block;height:100%;background:#fff;transform-origin:left}
+.play.hurry .timebar i{background:#FFD54A} .play.hurry .time{color:#FFD54A}
+.stage{display:grid;place-content:center;justify-items:center;text-align:center;gap:12px;min-height:0}
+.tag{background:rgba(0,0,0,.22);border-radius:999px;padding:4px 14px;font-weight:700;font-size:.92rem}
+.word{font-family:var(--display);font-weight:800;font-size:clamp(2.2rem,13vmin,7rem);line-height:1.02;text-wrap:balance;max-width:18ch;overflow-wrap:anywhere}
+.lvl{font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;opacity:.75;font-weight:700}
+.phint{font-size:.9rem;opacity:.85;font-weight:600}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.act{border:0;border-radius:18px;min-height:64px;font-family:var(--display);font-size:1.4rem;font-weight:800}
+.act.p{background:rgba(255,255,255,.18);color:#fff}
+.act.o{background:#fff;color:#0E5C3C}
+.flash,.count{position:absolute;inset:0;display:grid;place-items:center;align-content:center;text-align:center;gap:10px;font-family:var(--display);font-weight:800;padding:20px}
+.flash{font-size:clamp(3rem,18vmin,9rem);animation:pop .4s ease-out}
+.flash.ok{background:var(--ok)} .flash.pass{background:var(--pass)} .flash.time{background:var(--stage)}
+.count{background:var(--stage)}
+.count p{font-family:var(--body);font-weight:700;font-size:1.1rem;max-width:30ch}
+#countNum{font-size:clamp(5rem,30vmin,12rem);line-height:1}
+@keyframes pop{from{transform:scale(1.06)}to{transform:none}}
+@media (orientation:landscape) and (max-height:500px){
+  .play{gap:6px} .act{min-height:52px;font-size:1.2rem} .word{font-size:clamp(2rem,15vmin,6rem)}
+}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:700;max-width:calc(100% - 32px);text-align:center}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap" id="setup">
+  <header class="hero">
+    <h1>World <span>Charades</span></h1>
+    <p>Act it out, no talking. 20 themes and over 800 words from every corner of the map, with tilt controls for phones.</p>
+  </header>
+
+  <section class="card">
+    <h2>Teams</h2>
+    <div id="teams" class="teams"></div>
+    <button id="addTeam" class="ghost" type="button">+ Add team</button>
+  </section>
+
+  <section class="card">
+    <h2>Rules</h2>
+    <div class="fields">
+      <div class="field"><span class="label">Turn length</span>
+        <div class="seg" data-key="seconds"><button type="button" data-v="30">30s</button><button type="button" data-v="60">60s</button><button type="button" data-v="90">90s</button></div></div>
+      <div class="field"><span class="label">Rounds per team</span>
+        <div class="seg" data-key="rounds"><button type="button" data-v="1">1</button><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button><button type="button" data-v="4">4</button><button type="button" data-v="5">5</button></div></div>
+      <div class="field"><span class="label">Difficulty</span>
+        <div class="seg" data-key="level"><button type="button" data-v="any">Any</button><button type="button" data-v="e">Easy</button><button type="button" data-v="m">Medium</button><button type="button" data-v="h">Hard</button></div></div>
+      <div class="field"><span class="label">Options</span>
+        <label class="check"><input type="checkbox" id="penalty"> Passing costs 1 point</label>
+        <label class="check"><input type="checkbox" id="sound"> Sounds and vibration</label></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Tilt controls</h2>
+    <label class="check"><input type="checkbox" id="tilt"> Tilt the phone to answer</label>
+    <p class="hint">The guesser holds the phone on their forehead, screen facing the team. Tilt it down (nod) when you guess right. Tilt it up to pass. The buttons keep working too.</p>
+    <div class="tiltbox" id="tiltbox">
+      <div class="meter" aria-hidden="true"><div class="z p" id="zP">↑ Pass</div><div class="z"></div><div class="z o" id="zO">Got it ↓</div><div class="needle" id="needle"></div></div>
+      <div class="row"><span class="hint" id="tiltRead">Tap Test tilt, then hold the phone upright and tip it.</span><button id="testTilt" class="small" type="button">Test tilt</button></div>
+      <label class="check"><input type="checkbox" id="flip"> Swap directions (use if down shows Pass)</label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row"><h2>Themes</h2><span class="hint" id="themeCount"></span></div>
+    <div class="row" style="justify-content:flex-start">
+      <button class="small" type="button" data-sel="all">Select all</button>
+      <button class="small" type="button" data-sel="none">Clear</button>
+      <button class="small" type="button" data-sel="random">Random 4</button>
+    </div>
+    <div id="themes" class="themes"></div>
+    <label class="label" for="custom">Your own words</label>
+    <textarea id="custom" placeholder="Grandma's lasagne, Our trip to Lisbon, The office printer"></textarea>
+    <p class="hint">Separate with commas or new lines. They join the deck as their own theme.</p>
+  </section>
+
+  <details class="card how">
+    <summary>How to play</summary>
+    <ol>
+      <li>Teams take turns. One player per turn acts while their team guesses, or wears the phone on their forehead in tilt mode while the team acts.</li>
+      <li>No talking, no mouthing, no pointing at objects in the room.</li>
+      <li>Classic signs: hold up fingers for the number of words, tug your ear for "sounds like", crank an old camera for a film, open your palms for a book, sing silently for a song.</li>
+      <li>Score a point for each word guessed before the timer runs out. After each turn you can fix any mistakes before scores are added.</li>
+    </ol>
+  </details>
+</div>
+
+<div class="startbar" id="startbar"><button id="start" class="primary" type="button">Start game</button></div>
+
+<div class="wrap" id="ready" hidden>
+  <div class="turncard" id="turncard">
+    <span class="label" id="rRound"></span>
+    <h2 id="rTeam"></h2>
+    <p id="rHow"></p>
+  </div>
+  <button id="goTurn" class="primary" type="button" style="justify-self:center">Start turn</button>
+  <section class="card"><h2>Scores</h2><ul class="scores" id="rScores"></ul></section>
+  <div class="btnrow"><button id="quit1" class="secondary" type="button">Quit game</button></div>
+</div>
+
+<section id="play" class="play" hidden>
+  <div class="bar"><span class="nm" id="pTeam"></span><span class="pill" id="pScore">0</span><button id="bEnd" class="endbtn" type="button">End turn</button><span class="time" id="pTime"></span></div>
+  <div class="timebar"><i id="pFill"></i></div>
+  <div class="stage" aria-live="polite"><span class="tag" id="pTheme"></span><div class="word" id="pWord"></div><span class="lvl" id="pLvl"></span><span class="phint" id="pHint"></span></div>
+  <div class="actions"><button id="bPass" class="act p" type="button">Pass</button><button id="bOk" class="act o" type="button">Got it</button></div>
+  <div id="flash" class="flash" hidden></div>
+  <div id="count" class="count" hidden><p id="countMsg"></p><div id="countNum"></div></div>
+</section>
+
+<div class="wrap" id="summary" hidden>
+  <section class="card">
+    <span class="label" id="sTeam"></span>
+    <div class="big" id="sPts"></div>
+    <p class="hint">Tap a word to fix the call before scores are added.</p>
+    <div class="results" id="sList"></div>
+  </section>
+  <button id="sNext" class="primary" type="button" style="justify-self:center"></button>
+</div>
+
+<div class="wrap" id="final" hidden>
+  <div class="turncard" id="fCard"><span class="label">Final scores</span><h2 id="fWin"></h2></div>
+  <section class="card"><ul class="scores" id="fScores"></ul></section>
+  <div class="btnrow"><button id="again" class="primary" type="button">Play again</button><button id="toSetup" class="secondary" type="button">Change settings</button></div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const THEMES=[
+{id:"animals",name:"Animals",emoji:"🐾",color:"#2E7D4F",
+ e:"Elephant|Kangaroo|Penguin|Monkey|Snake|Giraffe|Lion|Rabbit|Frog|Cat|Dog|Fish|Bird|Horse",
+ m:"Panda|Camel|Flamingo|Octopus|Crocodile|Koala|Gorilla|Peacock|Dolphin|Owl|Bat|Chameleon|Ostrich|Polar bear",
+ h:"Komodo dragon|Platypus|Sloth|Hedgehog|Narwhal|Meerkat|Pufferfish|Yak|Seahorse|Armadillo|Woodpecker|Llama"},
+{id:"food",name:"World Foods",emoji:"🍜",color:"#C2410C",
+ e:"Pizza|Ice cream|Banana|Noodles|Rice|Bread|Soup|Boiled egg|Burger|Popcorn|Watermelon|Chocolate|Pancakes|Coconut",
+ m:"Sushi|Tacos|Dumplings|Croissant|Paella|Curry|Kebab|Spaghetti|Falafel|Hummus|Fondue|Crêpe|Pretzel|Spring rolls",
+ h:"Jollof rice|Pho|Kimchi|Ceviche|Pierogi|Biryani|Baklava|Empanada|Poutine|Tagine|Dim sum|Haggis"},
+{id:"landmarks",name:"Landmarks",emoji:"🗼",color:"#1F5FAD",
+ e:"Eiffel Tower|Pyramids of Giza|Great Wall of China|Statue of Liberty|Big Ben|Leaning Tower of Pisa|Taj Mahal|Sydney Opera House|Mount Everest|Niagara Falls|Colosseum|Christ the Redeemer",
+ m:"Machu Picchu|Stonehenge|Acropolis|Golden Gate Bridge|Mount Fuji|Sagrada Família|Burj Khalifa|Petra|Kremlin|Victoria Falls|Angkor Wat|Tower Bridge|Grand Canyon|Chichén Itzá",
+ h:"Uluru|Moai of Easter Island|Neuschwanstein Castle|Forbidden City|Hagia Sophia|Table Mountain|Alhambra|Mont-Saint-Michel|Brandenburg Gate|Petronas Towers|Great Barrier Reef|Iguazu Falls|Borobudur|Atomium"},
+{id:"sports",name:"Sports",emoji:"⚽",color:"#0E7C86",
+ e:"Football|Basketball|Swimming|Tennis|Boxing|Running|Skiing|Cycling|Golf|Volleyball|Skateboarding|Karate|Gymnastics",
+ m:"Cricket|Table tennis|Surfing|Fencing|Rugby|Archery|Ice hockey|Badminton|Rowing|Judo|Baseball|Wrestling|Weightlifting|Snowboarding",
+ h:"Sumo wrestling|Curling|Polo|Kabaddi|Hurling|Water polo|Pole vault|Synchronised swimming|Sepak takraw|Bobsleigh|Triathlon|Javelin|Taekwondo"},
+{id:"films",name:"World Cinema",emoji:"🎬",color:"#7A2E8E",
+ e:"Titanic|The Lion King|Frozen|Jaws|Harry Potter|Star Wars|Toy Story|Spider-Man|Finding Nemo|King Kong|Batman|Shrek|Jurassic Park|Superman",
+ m:"Spirited Away|Avatar|The Matrix|Mamma Mia!|Slumdog Millionaire|Life of Pi|Gladiator|Ratatouille|Up|Pirates of the Caribbean|Mary Poppins|Godzilla|Coco|Mr. Bean's Holiday",
+ h:"Parasite|Amélie|Crouching Tiger, Hidden Dragon|Cinema Paradiso|Lagaan|City of God|My Neighbour Totoro|Life Is Beautiful|Pan's Labyrinth|Run Lola Run|3 Idiots|Dilwale Dulhania Le Jayenge|Roma"},
+{id:"music",name:"Music & Instruments",emoji:"🎵",color:"#B4235A",
+ e:"Guitar|Piano|Drums|Violin|Trumpet|Singer|Microphone|Headphones|Flute|Karaoke|Rock star|Orchestra|Lullaby|Whistling",
+ m:"Bagpipes|Accordion|Harp|Saxophone|Conductor|DJ|Opera singer|Cello|Harmonica|Xylophone|Ukulele|Tambourine|Beatboxing|Choir",
+ h:"Sitar|Didgeridoo|Bongo drums|Steel drum|Balalaika|Koto|Djembe|Mariachi band|Castanets|Theremin|Bandoneón|Yodelling|Kalimba"},
+{id:"jobs",name:"Jobs",emoji:"🧑‍🔧",color:"#8A5A00",
+ e:"Doctor|Teacher|Firefighter|Police officer|Chef|Pilot|Farmer|Dentist|Painter|Clown|Mail carrier|Hairdresser|Photographer|Astronaut",
+ m:"Surgeon|Fisherman|Barista|Tailor|Plumber|Lifeguard|Magician|Waiter|Mechanic|Librarian|Taxi driver|Builder|Nurse|Zookeeper",
+ h:"Archaeologist|Beekeeper|Lighthouse keeper|Sommelier|Translator|Street performer|Air traffic controller|Shepherd|Blacksmith|Puppeteer|Window cleaner|Detective|Tightrope walker"},
+{id:"actions",name:"Everyday Actions",emoji:"🪥",color:"#3949AB",
+ e:"Brushing teeth|Sleeping|Eating soup|Crying|Laughing|Sneezing|Clapping|Jumping|Reading a book|Driving a car|Washing hands|Taking a selfie|Yawning|Waving goodbye",
+ m:"Riding a bicycle|Ironing clothes|Changing a nappy|Walking a dog|Flying a kite|Tying shoelaces|Putting on makeup|Shaving|Climbing a ladder|Blowing up a balloon|Catching a bus|Chopping onions|Doing push-ups|Brushing hair",
+ h:"Building flat-pack furniture|Parallel parking|Wrapping a present|Threading a needle|Walking on ice|Losing your keys|Missing the train|Having hiccups|Juggling|Carrying shopping upstairs|Stepping on a Lego brick|Untangling headphones"},
+{id:"myths",name:"Myths & Legends",emoji:"🐉",color:"#5E35B1",
+ e:"Dragon|Mermaid|Unicorn|Ghost|Vampire|Wizard|Witch|Giant|Fairy|Troll|Genie|Zombie|Werewolf",
+ m:"Medusa|Phoenix|Thor's hammer|Cyclops|Pegasus|Minotaur|Hercules|Robin Hood|King Arthur|Pandora's box|Trojan horse|Aladdin's lamp|Sphinx|Yeti|Loch Ness Monster",
+ h:"Monkey King|Anansi the spider|Golem|Kitsune|Baba Yaga|Icarus|Achilles' heel|Quetzalcoatl|Thunderbird|Banshee|Valkyrie|Kraken|Midas touch|El Dorado"},
+{id:"festivals",name:"Festivals",emoji:"🎉",color:"#D81B60",
+ e:"Birthday party|New Year's Eve|Wedding|Fireworks|Halloween|Christmas tree|Carnival|Easter egg hunt|Valentine's Day|Graduation|Parade|Costume party|Mother's Day",
+ m:"Diwali|Lunar New Year|Holi|Oktoberfest|Day of the Dead|Carnival in Rio|Eid al-Fitr|Hanukkah|Mardi Gras|Dragon dance|St Patrick's Day|Thanksgiving dinner|Lantern festival|La Tomatina",
+ h:"Songkran water fight|Running of the bulls|Up Helly Aa|Cherry blossom viewing|Notting Hill Carnival|Burning Man|Bastille Day|Venice Carnival masks|Mid-Autumn Festival|Loy Krathong|Glastonbury Festival|Nowruz|Cheese rolling"},
+{id:"history",name:"Historical Figures",emoji:"🏛️",color:"#795548",
+ e:"Cleopatra|Napoleon|Albert Einstein|Mozart|Leonardo da Vinci|Julius Caesar|Charlie Chaplin|William Shakespeare|Mahatma Gandhi|Nelson Mandela|Tutankhamun|Elvis Presley|Isaac Newton",
+ m:"Genghis Khan|Marie Curie|Joan of Arc|Frida Kahlo|Galileo|Beethoven|Marco Polo|Neil Armstrong|Martin Luther King Jr.|Pablo Picasso|Florence Nightingale|Bruce Lee|Vincent van Gogh|Queen Victoria",
+ h:"Confucius|Simón Bolívar|Catherine the Great|Alexander the Great|Ada Lovelace|Nikola Tesla|Mansa Musa|Ibn Battuta|Rumi|Sitting Bull|Emperor Akbar|Hatshepsut|Yuri Gagarin|Shaka Zulu"},
+{id:"inventions",name:"Inventions",emoji:"💡",color:"#546E7A",
+ e:"Wheel|Light bulb|Telephone|Television|Computer|Car|Aeroplane|Camera|Umbrella|Bicycle|Clock|Scissors|Toothbrush|Smartphone",
+ m:"Printing press|Compass|Paper|Telescope|Steam engine|Microwave|Internet|Vaccine|Calculator|Radio|Robot|Refrigerator|Lift|Washing machine|Typewriter",
+ h:"Paper money|Abacus|Sundial|Windmill|Gramophone|Morse code|Velcro|Barcode|3D printer|Satellite|Hourglass|Braille"},
+{id:"nature",name:"Nature & Weather",emoji:"🌋",color:"#2E7D32",
+ e:"Volcano|Rainbow|Snow|Thunderstorm|Waterfall|Sunrise|Beach|Mountain|River|Tree|Moon|Desert|Wind|Flower",
+ m:"Tsunami|Earthquake|Tornado|Monsoon|Avalanche|Glacier|Jungle|Iceberg|Cave|Fog|Hailstorm|Coral reef|Sandstorm|Island",
+ h:"Northern lights|Solar eclipse|Quicksand|Geyser|Fjord|Mirage|Drought|Tide|Savannah|Oasis|Rainforest canopy|Hot spring|Permafrost"},
+{id:"books",name:"Stories & Books",emoji:"📚",color:"#8D3B2B",
+ e:"Cinderella|Snow White|Little Red Riding Hood|Pinocchio|Peter Pan|Alice in Wonderland|The Three Little Pigs|Sleeping Beauty|Goldilocks|Jack and the Beanstalk|Hansel and Gretel|The Ugly Duckling|Rapunzel|Winnie-the-Pooh",
+ m:"Harry Potter|The Little Prince|Don Quixote|Romeo and Juliet|Sherlock Holmes|Robinson Crusoe|Dracula|Frankenstein|The Jungle Book|Gulliver's Travels|Treasure Island|Heidi|Moby-Dick|The Hobbit",
+ h:"One Thousand and One Nights|The Odyssey|Les Misérables|War and Peace|Journey to the West|Things Fall Apart|One Hundred Years of Solitude|The Tale of Genji|Pippi Longstocking|Around the World in 80 Days|The Divine Comedy|Hamlet|Twenty Thousand Leagues Under the Sea"},
+{id:"places",name:"Countries & Cities",emoji:"🌍",color:"#0277BD",
+ e:"Japan|Brazil|Egypt|Italy|China|India|Australia|Mexico|France|Canada|Paris|London|New York|Rome",
+ m:"Venice|Istanbul|New Zealand|Kenya|Argentina|Greece|Iceland|Switzerland|Tokyo|Rio de Janeiro|Dubai|Moscow|Amsterdam|Hawaii",
+ h:"Mongolia|Madagascar|Peru|Nepal|Morocco|Finland|Singapore|Marrakech|Kyoto|Havana|Cape Town|Bangkok|Buenos Aires|Lagos"},
+{id:"cartoons",name:"Cartoons & Anime",emoji:"🧸",color:"#E53935",
+ e:"Mickey Mouse|Pokémon|Peppa Pig|SpongeBob|Tom and Jerry|Hello Kitty|The Smurfs|Scooby-Doo|Bugs Bunny|Minions|Super Mario|Pikachu|Teletubbies|Garfield",
+ m:"Tintin|Asterix|Dragon Ball|Sailor Moon|Doraemon|Popeye|The Simpsons|Pink Panther|Shaun the Sheep|Wallace and Gromit|Moomins|Naruto|Masha and the Bear|Paw Patrol",
+ h:"Astro Boy|Lucky Luke|Barbapapa|Calimero|Mafalda|Captain Tsubasa|Maya the Bee|Bluey|Avatar: The Last Airbender|Attack on Titan|One Piece|Pingu"},
+{id:"dances",name:"Dances of the World",emoji:"💃",color:"#AD1457",
+ e:"Ballet|Disco|Breakdance|Conga line|Robot dance|Hip hop|Slow dance|Tap dance|Belly dance|The twist|Chicken dance|Macarena|Moonwalk",
+ m:"Tango|Flamenco|Salsa|Waltz|Bollywood dance|Irish step dance|Cha-cha-cha|Samba|Can-can|Hula|Line dancing|Limbo|Gangnam Style|Zumba",
+ h:"Haka|Capoeira|Polka|Cossack dance|Bhangra|Lion dance|Sirtaki|Lambada|Merengue|Maypole dance|Charleston|Kizomba|Highland fling"},
+{id:"science",name:"Science & Space",emoji:"🚀",color:"#283593",
+ e:"Rocket|Planet|Shooting star|Alien|Magnet|Dinosaur|Skeleton|Sun|Earth|Microscope|Spaceship|Bubbles|Gravity|Battery",
+ m:"Black hole|Rocket launch|DNA|Fossil|Comet|Saturn's rings|Space station|Electricity|Chemistry lab|Mars rover|Solar panel|Laser|Magnifying glass|Thermometer",
+ h:"Big Bang|Photosynthesis|Evolution|Time travel|Quantum physics|Periodic table|Atom|Zero gravity|Supernova|Constellation|Milky Way|Meteor shower|Light year"},
+{id:"transport",name:"Transport",emoji:"🚲",color:"#00838F",
+ e:"Car|Bus|Train|Boat|Helicopter|Motorbike|Scooter|Taxi|Ship|Tractor|Ambulance|Fire engine|Skateboard|Roller skates",
+ m:"Gondola|Rickshaw|Hot-air balloon|Bullet train|Submarine|Cable car|Canoe|Double-decker bus|Sailboat|Escalator|Jet ski|Horse and carriage|Tram|Parachute",
+ h:"Camel caravan|Tuk-tuk|Dog sled|Hovercraft|Zeppelin|Unicycle|Pedalo|Junk boat|Funicular|Space shuttle|Monorail|Segway|Kayak|Penny-farthing"},
+{id:"emotions",name:"Emotions",emoji:"😄",color:"#E65100",
+ e:"Happy|Sad|Angry|Scared|Tired|Surprised|Hungry|Excited|Bored|Shy|Freezing cold|Too hot|Sleepy|In love",
+ m:"Jealous|Embarrassed|Proud|Nervous|Confused|Disgusted|Grumpy|Lonely|Relieved|Brave|Silly|Stressed|Curious|Worried",
+ h:"Homesick|Nostalgic|Guilty|Suspicious|Overwhelmed|Hopeful|Awkward|Impatient|Determined|Heartbroken|Starstruck|Hangry|Sarcastic|Jet-lagged"}
+];
+const CUSTOM={id:"custom",name:"Your words",emoji:"✏️",color:"#37474F"};
+const LEVELS={e:"Easy",m:"Medium",h:"Hard",c:""};
+const TEAM_COLORS=["#E3324F","#1F5FAD","#14935F","#7A2E8E","#E9791C","#0E7C86"];
+const TH=40, REARM=18; // degrees from the starting angle: tilt past TH to answer, return within REARM to arm the next card
+
+const $=s=>document.querySelector(s);
+const store={
+  get(k,d){try{const v=localStorage.getItem("charades:"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set(k,v){try{localStorage.setItem("charades:"+k,JSON.stringify(v))}catch(e){}}
+};
+const DEFAULTS={teams:["Team Sun","Team Moon"],seconds:60,rounds:3,level:"any",penalty:false,sound:true,tilt:true,flip:false,themes:THEMES.map(t=>t.id),custom:""};
+let settings=Object.assign({},DEFAULTS,store.get("settings",{}));
+const save=()=>store.set("settings",settings);
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const words=t=>["e","m","h"].reduce((n,l)=>n+t[l].split("|").length,0);
+const customWords=()=>settings.custom.split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+
+let toastT;
+function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
+
+function showScreen(id){
+  ["setup","ready","play","summary","final"].forEach(s=>$("#"+s).hidden=s!==id);
+  $("#startbar").hidden=id!=="setup";
+  window.scrollTo(0,0);
+}
+
+/* ---------- Setup ---------- */
+function renderTeams(){
+  const box=$("#teams");box.innerHTML="";
+  settings.teams.forEach((n,i)=>{
+    const row=document.createElement("div");row.className="team";
+    row.innerHTML=`<span class="dot" style="background:${TEAM_COLORS[i]}"></span><input type="text" id="team${i}" maxlength="24" aria-label="Team ${i+1} name"><button class="icon" type="button" data-rm="${i}" aria-label="Remove team ${i+1}">✕</button>`;
+    row.querySelector("input").value=n;
+    row.querySelector("button").disabled=settings.teams.length<=2;
+    box.append(row);
+  });
+  $("#addTeam").disabled=settings.teams.length>=6;
+}
+$("#teams").addEventListener("input",e=>{const i=+e.target.id.replace("team","");settings.teams[i]=e.target.value;save()});
+$("#teams").addEventListener("click",e=>{const b=e.target.closest("[data-rm]");if(!b)return;settings.teams.splice(+b.dataset.rm,1);save();renderTeams()});
+$("#addTeam").onclick=()=>{settings.teams.push("Team "+(settings.teams.length+1));save();renderTeams();$("#team"+(settings.teams.length-1)).select()};
+
+function renderSegs(){document.querySelectorAll(".seg").forEach(seg=>seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===String(settings[seg.dataset.key])))))}
+document.querySelectorAll(".seg").forEach(seg=>seg.addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;const v=b.dataset.v;
+  settings[seg.dataset.key]=isNaN(+v)?v:+v;save();renderSegs();
+}));
+["penalty","sound","tilt","flip"].forEach(k=>{const el=$("#"+k);el.checked=!!settings[k];el.onchange=()=>{settings[k]=el.checked;save();$("#tiltbox").hidden=!settings.tilt}});
+
+function renderThemes(){
+  $("#themes").innerHTML=THEMES.map(t=>`<label class="chip${settings.themes.includes(t.id)?" on":""}" style="--c:${t.color}"><input type="checkbox" value="${t.id}"${settings.themes.includes(t.id)?" checked":""}><span aria-hidden="true">${t.emoji}</span><span class="nm">${t.name}</span><small>${words(t)}</small></label>`).join("");
+  updateCount();
+}
+function updateCount(){
+  const n=settings.themes.length, w=THEMES.filter(t=>settings.themes.includes(t.id)).reduce((s,t)=>s+words(t),0)+customWords().length;
+  $("#themeCount").textContent=`${n} of ${THEMES.length} themes · ${w} words`;
+}
+$("#themes").addEventListener("change",e=>{
+  const id=e.target.value;settings.themes=e.target.checked?[...settings.themes,id]:settings.themes.filter(x=>x!==id);
+  e.target.closest(".chip").classList.toggle("on",e.target.checked);save();updateCount();
+});
+document.querySelectorAll("[data-sel]").forEach(b=>b.onclick=()=>{
+  const m=b.dataset.sel;
+  settings.themes=m==="all"?THEMES.map(t=>t.id):m==="none"?[]:shuffle(THEMES.map(t=>t.id)).slice(0,4);
+  save();renderThemes();
+});
+$("#custom").value=settings.custom;
+$("#custom").addEventListener("input",e=>{settings.custom=e.target.value;save();updateCount()});
+
+/* ---------- Tilt sensor ---------- */
+const tilt={listening:false,angle:null,last:0,baseline:0,armed:false,samples:[],testing:false};
+function onOrient(e){
+  if(e.beta==null||e.gamma==null)return;
+  const r=Math.PI/180;
+  // cos(beta)·cos(gamma) is how much the screen faces the ceiling (+1) or floor (-1),
+  // whatever way the phone is rotated, so portrait and landscape work the same.
+  let a=Math.asin(clamp(Math.cos(e.beta*r)*Math.cos(e.gamma*r),-1,1))/r;
+  if(settings.flip)a=-a;
+  const now=performance.now();
+  tilt.angle=a;tilt.last=now;
+  tilt.samples.push([now,a]);if(tilt.samples.length>60)tilt.samples.shift();
+  if(tilt.testing)drawMeter(a);
+  if(!turn||!turn.running||!turn.tiltOn)return;
+  const rel=a-tilt.baseline;
+  if(tilt.armed){
+    if(rel<=-TH){tilt.armed=false;act(true)}
+    else if(rel>=TH){tilt.armed=false;act(false)}
+  }else if(Math.abs(rel)<REARM)tilt.armed=true;
+}
+async function enableTilt(){
+  if(!("DeviceOrientationEvent" in window))return "unsupported";
+  try{
+    if(typeof DeviceOrientationEvent.requestPermission==="function"){
+      const r=await DeviceOrientationEvent.requestPermission();
+      if(r!=="granted")return "denied";
+    }
+  }catch(err){return "denied"}
+  if(!tilt.listening){window.addEventListener("deviceorientation",onOrient);tilt.listening=true}
+  return "ok";
+}
+function drawMeter(a){
+  const pos=clamp(50-a/90*50,2,98);
+  $("#needle").style.left=pos+"%";
+  $("#zO").classList.toggle("hit",a<=-TH);$("#zP").classList.toggle("hit",a>=TH);
+  const dir=a<=-TH?"Got it":a>=TH?"Pass":"Upright";
+  $("#tiltRead").textContent=`${Math.round(a)}° · ${dir}`;
+}
+$("#testTilt").onclick=async()=>{
+  const r=await enableTilt();
+  if(r!=="ok"){$("#tiltRead").textContent=r==="denied"?"Motion access was blocked. Allow it in the browser settings, or use the buttons.":"This device has no tilt sensor. Use the buttons instead.";return}
+  tilt.testing=true;
+  $("#tiltRead").textContent="Hold the phone upright and tip it…";
+  setTimeout(()=>{if(!tilt.last)$("#tiltRead").textContent="No tilt readings yet. Phones only, and the page must be on https."},1500);
+};
+
+/* ---------- Sound & device helpers ---------- */
+let ac;
+function beep(freqs,dur=.12,type="sine",vol=.2){
+  if(!settings.sound)return;
+  try{
+    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    if(ac.state==="suspended")ac.resume();
+    const t0=ac.currentTime;
+    freqs.forEach((f,i)=>{const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;
+      g.gain.setValueAtTime(vol,t0+i*dur);g.gain.exponentialRampToValueAtTime(.001,t0+(i+1)*dur);
+      o.connect(g).connect(ac.destination);o.start(t0+i*dur);o.stop(t0+(i+1)*dur)});
+  }catch(e){}
+}
+const buzz=p=>{if(settings.sound)try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
+let wakeLock=null;
+async function keepAwake(){try{if(!wakeLock&&navigator.wakeLock){wakeLock=await navigator.wakeLock.request("screen");wakeLock.addEventListener("release",()=>wakeLock=null)}}catch(e){}}
+async function goLandscape(){
+  try{
+    if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen({navigationUI:"hide"});
+    if(screen.orientation&&screen.orientation.lock)await screen.orientation.lock("landscape");
+  }catch(e){}
+}
+function leaveFullscreen(){try{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}catch(e){}}
+
+/* ---------- Game ---------- */
+let game=null, turn=null;
+function buildDeck(){
+  const out=[];
+  for(const t of THEMES){
+    if(!settings.themes.includes(t.id))continue;
+    for(const l of ["e","m","h"]){
+      if(settings.level!=="any"&&settings.level!==l)continue;
+      t[l].split("|").forEach(w=>out.push({text:w,theme:t,level:l}));
+    }
+  }
+  customWords().forEach(w=>out.push({text:w,theme:CUSTOM,level:"c"}));
+  return shuffle(out);
+}
+const curIdx=()=>game.turnNo%game.teams.length;
+const curTeam=()=>game.teams[curIdx()];
+const roundNo=()=>Math.floor(game.turnNo/game.teams.length)+1;
+
+function newGame(){
+  game={teams:settings.teams.map((n,i)=>({name:n.trim()||"Team "+(i+1),score:0,color:TEAM_COLORS[i]})),turnNo:0,deck:buildDeck()};
+  showReady();
+}
+$("#start").onclick=()=>{
+  if(!buildDeck().length){toast("Pick at least one theme, or add your own words.");return}
+  beep([523,659],.08,"triangle",.12);
+  newGame();
+};
+
+function renderScores(ul){
+  const max=Math.max(...game.teams.map(t=>t.score));
+  ul.innerHTML="";
+  game.teams.forEach(t=>{
+    const li=document.createElement("li");
+    if(t.score===max&&max>0)li.className="lead";
+    li.innerHTML=`<span class="dot" style="background:${t.color}"></span><span class="nm"></span><b>${t.score}</b>`;
+    li.querySelector(".nm").textContent=t.name;ul.append(li);
+  });
+}
+function showReady(){
+  const t=curTeam();
+  $("#turncard").style.setProperty("--tcol",t.color);
+  $("#rRound").textContent=`Round ${roundNo()} of ${settings.rounds}`;
+  $("#rTeam").textContent=t.name;
+  $("#rHow").textContent=settings.tilt
+    ?"Guesser: hold the phone on your forehead, screen facing your team. Team: act it out silently. Tilt down when you get it, tilt up to pass."
+    :"Actor: take the phone and act out each word without speaking. Tap Got it or Pass, or use the arrow keys.";
+  renderScores($("#rScores"));
+  showScreen("ready");
+}
+$("#goTurn").onclick=startTurn;
+$("#quit1").onclick=()=>{leaveFullscreen();showScreen("setup")};
+
+async function startTurn(){
+  let note="";
+  let tiltOn=false;
+  if(settings.tilt){
+    const r=await enableTilt(); // must run first, inside the tap, for iPhone's permission prompt
+    if(r==="ok")tiltOn=true;
+    else note=r==="denied"?"Motion access was blocked, so use the buttons.":"No tilt sensor here, so use the buttons.";
+    if(tiltOn)goLandscape();
+  }
+  keepAwake();
+  turn={cards:[],running:false,card:null,tiltOn,lastAct:0};
+  const play=$("#play");play.style.removeProperty("--tc");play.classList.remove("hurry");
+  $("#pTeam").textContent=curTeam().name;$("#pScore").textContent="0";
+  $("#pTime").textContent=settings.seconds;$("#pFill").style.transform="scaleX(1)";
+  $("#pWord").textContent="";$("#pTheme").textContent="";$("#pLvl").textContent="";
+  showScreen("play");
+  countdown(note);
+}
+function countdown(note){
+  const c=$("#count");c.hidden=false;
+  $("#countMsg").textContent=note||(turn.tiltOn?"Phone on your forehead, screen facing your team":"Get ready to act");
+  let n=3;
+  const step=()=>{
+    if(!turn)return;
+    if(n===0){c.hidden=true;begin();return}
+    $("#countNum").textContent=n;beep([520],.1,"sine",.15);n--;
+    turn.cd=setTimeout(step,1000);
+  };
+  step();
+}
+function begin(){
+  const now=performance.now();
+  const recent=tilt.samples.filter(s=>now-s[0]<600).map(s=>s[1]);
+  if(turn.tiltOn&&recent.length){
+    tilt.baseline=clamp(recent.reduce((a,b)=>a+b,0)/recent.length,-35,35);
+    $("#pHint").textContent="Tilt down: got it · Tilt up: pass";
+  }else{
+    if(turn.tiltOn){turn.tiltOn=false;$("#pHint").textContent="No tilt readings. Tap the buttons."}
+    else $("#pHint").textContent="";
+  }
+  tilt.armed=false;
+  turn.running=true;turn.endAt=now+settings.seconds*1000;turn.lastTick=null;
+  nextCard();loop();
+}
+function nextCard(){
+  if(!game.deck.length){game.deck=buildDeck();toast("Every card has been played. Reshuffling the deck.")}
+  const c=game.deck.pop();turn.card=c;
+  $("#play").style.setProperty("--tc",c.theme.color);
+  $("#pTheme").textContent=`${c.theme.emoji} ${c.theme.name}`;
+  $("#pWord").textContent=c.text;
+  $("#pLvl").textContent=LEVELS[c.level];
+}
+function points(cards){return cards.reduce((p,c)=>p+(c.ok?1:settings.penalty?-1:0),0)}
+function act(ok){
+  if(!turn||!turn.running||!turn.card)return;
+  const now=performance.now();if(now-turn.lastAct<350)return;turn.lastAct=now;
+  turn.cards.push({text:turn.card.text,theme:turn.card.theme,ok});
+  flash(ok?"ok":"pass",ok?"Got it!":"Pass");
+  if(ok){beep([660,990],.09,"triangle",.22);buzz(60)}else{beep([330,220],.1,"square",.07);buzz([30,40,30])}
+  $("#pScore").textContent=points(turn.cards);
+  nextCard();
+}
+let flashT;
+function flash(kind,text){
+  const f=$("#flash");f.className="flash "+kind;f.textContent=text;f.hidden=false;
+  f.style.animation="none";void f.offsetWidth;f.style.animation="";
+  clearTimeout(flashT);flashT=setTimeout(()=>f.hidden=true,kind==="time"?1200:420);
+}
+function loop(){
+  if(!turn||!turn.running)return;
+  const left=Math.max(0,turn.endAt-performance.now()), secs=Math.ceil(left/1000);
+  $("#pTime").textContent=secs;
+  $("#pFill").style.transform=`scaleX(${left/(settings.seconds*1000)})`;
+  $("#play").classList.toggle("hurry",left<=10000);
+  if(left<=5000&&secs!==turn.lastTick){turn.lastTick=secs;if(secs>0)beep([880],.05,"sine",.12)}
+  if(left<=0){endTurn();return}
+  turn.raf=requestAnimationFrame(loop);
+}
+function endTurn(){
+  if(!turn)return;
+  clearTimeout(turn.cd);cancelAnimationFrame(turn.raf);$("#count").hidden=true;
+  const wasRunning=turn.running;turn.running=false;
+  if(wasRunning){flash("time","Time's up!");beep([200,150],.3,"sawtooth",.15);buzz(400)}
+  setTimeout(showSummary,wasRunning?1100:0);
+}
+$("#bOk").onclick=()=>act(true);
+$("#bPass").onclick=()=>act(false);
+$("#bEnd").onclick=endTurn;
+document.addEventListener("keydown",e=>{
+  if($("#play").hidden||!turn||!turn.running)return;
+  if(e.key==="ArrowRight"||e.key==="ArrowDown"){e.preventDefault();act(true)}
+  else if(e.key==="ArrowLeft"||e.key==="ArrowUp"){e.preventDefault();act(false)}
+});
+
+function showSummary(){
+  if($("#play").hidden&&!$("#summary").hidden)return;
+  const t=curTeam();
+  $("#sTeam").textContent=`${t.name} · Round ${roundNo()} of ${settings.rounds}`;
+  renderSummary();
+  const last=game.turnNo+1>=game.teams.length*settings.rounds;
+  $("#sNext").textContent=last?"See final scores":`Next: ${game.teams[(curIdx()+1)%game.teams.length].name}`;
+  showScreen("summary");
+}
+function renderSummary(){
+  const p=points(turn.cards);
+  $("#sPts").textContent=(p>0?"+":"")+p+(Math.abs(p)===1?" point":" points");
+  const box=$("#sList");box.innerHTML="";
+  if(!turn.cards.length){box.innerHTML=`<p class="hint">No cards played this turn.</p>`;return}
+  turn.cards.forEach((c,i)=>{
+    const b=document.createElement("button");b.type="button";b.className="res "+(c.ok?"ok":"no");
+    b.innerHTML=`<span class="w"></span><span class="mk">${c.ok?"Got it":"Passed"}</span>`;
+    b.querySelector(".w").textContent=c.text;
+    b.onclick=()=>{turn.cards[i].ok=!turn.cards[i].ok;renderSummary()};
+    box.append(b);
+  });
+}
+$("#sNext").onclick=()=>{
+  curTeam().score+=points(turn.cards);
+  turn=null;game.turnNo++;
+  if(game.turnNo>=game.teams.length*settings.rounds)showFinal();else showReady();
+};
+
+function showFinal(){
+  leaveFullscreen();
+  const sorted=[...game.teams].sort((a,b)=>b.score-a.score);
+  const top=sorted.filter(t=>t.score===sorted[0].score);
+  $("#fCard").style.setProperty("--tcol",top.length>1?"#37474F":top[0].color);
+  $("#fWin").textContent=top.length>1?`It's a tie: ${top.map(t=>t.name).join(" & ")}`:`${top[0].name} wins!`;
+  const keep=game.teams;game.teams=sorted;renderScores($("#fScores"));game.teams=keep;
+  showScreen("final");
+  beep([523,659,784,1047],.12,"triangle",.18);
+}
+$("#again").onclick=newGame;
+$("#toSetup").onclick=()=>showScreen("setup");
+
+renderTeams();renderSegs();renderThemes();
+$("#tiltbox").hidden=!settings.tilt;
+</script>
+
+</body></html>
