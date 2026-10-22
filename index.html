@@ -27,7 +27,7 @@ h1,h2,h3{font-family:var(--display);line-height:1.05;text-wrap:balance;margin:0}
 p{margin:0}
 button{font:inherit;color:inherit;cursor:pointer}
 button:disabled{opacity:.4;cursor:default}
-button:focus-visible,input:focus-visible,textarea:focus-visible,.chip:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+button:focus-visible,input:focus-visible,textarea:focus-visible,.chip:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
 
 .wrap{max-width:720px;margin:0 auto;padding-block:24px 130px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:16px}
 .hero{display:grid;gap:6px;padding-block:8px}
