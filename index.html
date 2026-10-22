@@ -1,7 +1,6 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>World Charades</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap">
@@ -74,6 +73,9 @@ textarea{min-height:76px;resize:vertical}
 .chip.on{background:var(--c);border-color:var(--c);color:#fff}
 .chip.on small{color:rgba(255,255,255,.8)}
 
+.dlg{border:0;padding:0;background:transparent;width:min(560px,calc(100% - 32px));max-height:calc(100% - 32px);color:var(--fg)}
+.dlg::backdrop{background:rgba(10,8,30,.55)}
+.chip .del{border:0;background:transparent;color:inherit;opacity:.7;width:26px;height:26px;border-radius:50%;flex:none;padding:0}
 .how ol{margin:0;padding-left:1.2rem;display:grid;gap:6px}
 .how summary{font-family:var(--display);font-size:1.3rem;font-weight:700;cursor:pointer}
 
@@ -113,7 +115,7 @@ textarea{min-height:76px;resize:vertical}
 .play.hurry .timebar i{background:#FFD54A} .play.hurry .time{color:#FFD54A}
 .stage{display:grid;place-content:center;justify-items:center;text-align:center;gap:12px;min-height:0}
 .tag{background:rgba(0,0,0,.22);border-radius:999px;padding:4px 14px;font-weight:700;font-size:.92rem}
-.word{font-family:var(--display);font-weight:800;font-size:clamp(2.2rem,13vmin,7rem);line-height:1.02;text-wrap:balance;max-width:18ch;overflow-wrap:anywhere}
+.word{font-family:var(--display);font-weight:800;font-size:clamp(2.8rem,17vmin,9rem);line-height:1;text-wrap:balance;max-width:16ch;overflow-wrap:anywhere}
 .lvl{font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;opacity:.75;font-weight:700}
 .phint{font-size:.9rem;opacity:.85;font-weight:600}
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -128,11 +130,12 @@ textarea{min-height:76px;resize:vertical}
 #countNum{font-size:clamp(5rem,30vmin,12rem);line-height:1}
 @keyframes pop{from{transform:scale(1.06)}to{transform:none}}
 @media (orientation:landscape) and (max-height:500px){
-  .play{gap:6px} .act{min-height:52px;font-size:1.2rem} .word{font-size:clamp(2rem,15vmin,6rem)}
+  .play{gap:6px} .act{min-height:52px;font-size:1.2rem} .word{font-size:clamp(2.6rem,20vmin,8rem)}
 }
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:700;max-width:calc(100% - 32px);text-align:center}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
+</head><body>
 
 <div class="wrap" id="setup">
   <header class="hero">
@@ -154,10 +157,12 @@ textarea{min-height:76px;resize:vertical}
       <div class="field"><span class="label">Rounds per team</span>
         <div class="seg" data-key="rounds"><button type="button" data-v="1">1</button><button type="button" data-v="2">2</button><button type="button" data-v="3">3</button><button type="button" data-v="4">4</button><button type="button" data-v="5">5</button></div></div>
       <div class="field"><span class="label">Difficulty</span>
-        <div class="seg" data-key="level"><button type="button" data-v="any">Any</button><button type="button" data-v="e">Easy</button><button type="button" data-v="m">Medium</button><button type="button" data-v="h">Hard</button></div></div>
+        <div class="seg" data-key="level"><button type="button" data-v="any">Any</button><button type="button" data-v="e">Easy</button><button type="button" data-v="m">Medium</button><button type="button" data-v="h">Hard</button></div>
+        <p class="hint">Easy: everyday things anyone can mime. Medium: well known but trickier to act. Hard: niche names and abstract ideas.</p></div>
       <div class="field"><span class="label">Options</span>
         <label class="check"><input type="checkbox" id="penalty"> Passing costs 1 point</label>
-        <label class="check"><input type="checkbox" id="sound"> Sounds and vibration</label></div>
+        <label class="check"><input type="checkbox" id="sound"> Sounds</label>
+        <div class="row" style="justify-content:flex-start"><label class="check"><input type="checkbox" id="vibrate"> Vibration</label><button id="testVib" class="small" type="button">Test</button></div></div>
     </div>
   </section>
 
@@ -180,9 +185,7 @@ textarea{min-height:76px;resize:vertical}
       <button class="small" type="button" data-sel="random">Random 4</button>
     </div>
     <div id="themes" class="themes"></div>
-    <label class="label" for="custom">Your own words</label>
-    <textarea id="custom" placeholder="Grandma's lasagne, Our trip to Lisbon, The office printer"></textarea>
-    <p class="hint">Separate with commas or new lines. They join the deck as their own theme.</p>
+    <button class="ghost" type="button" data-newcat>+ New category</button>
   </section>
 
   <details class="card how">
@@ -206,7 +209,7 @@ textarea{min-height:76px;resize:vertical}
   </div>
   <button id="goTurn" class="primary" type="button" style="justify-self:center">Start turn</button>
   <section class="card"><h2>Scores</h2><ul class="scores" id="rScores"></ul></section>
-  <div class="btnrow"><button id="quit1" class="secondary" type="button">Quit game</button></div>
+  <div class="btnrow"><button class="secondary" type="button" data-newcat>+ New category</button><button id="quit1" class="secondary" type="button">Quit game</button></div>
 </div>
 
 <section id="play" class="play" hidden>
@@ -233,6 +236,16 @@ textarea{min-height:76px;resize:vertical}
   <section class="card"><ul class="scores" id="fScores"></ul></section>
   <div class="btnrow"><button id="again" class="primary" type="button">Play again</button><button id="toSetup" class="secondary" type="button">Change settings</button></div>
 </div>
+
+<dialog id="catDlg" class="dlg">
+  <form id="catForm" method="dialog" class="card">
+    <h2>New category</h2>
+    <div class="field"><label class="label" for="catName">Name</label><input type="text" id="catName" maxlength="28" placeholder="Our holidays" required></div>
+    <div class="field"><label class="label" for="catWords">Words</label><textarea id="catWords" rows="5" placeholder="Grandma's lasagne, Lisbon trip, The office printer" required></textarea>
+      <p class="hint">Separate with commas or new lines. During a game, the words are shuffled into the deck straight away.</p></div>
+    <div class="btnrow"><button type="button" class="secondary" id="catCancel">Cancel</button><button type="submit" class="primary" style="width:auto">Add category</button></div>
+  </form>
+</dialog>
 
 <div class="toast" id="toast" hidden></div>
 
@@ -319,7 +332,7 @@ const THEMES=[
  m:"Jealous|Embarrassed|Proud|Nervous|Confused|Disgusted|Grumpy|Lonely|Relieved|Brave|Silly|Stressed|Curious|Worried",
  h:"Homesick|Nostalgic|Guilty|Suspicious|Overwhelmed|Hopeful|Awkward|Impatient|Determined|Heartbroken|Starstruck|Hangry|Sarcastic|Jet-lagged"}
 ];
-const CUSTOM={id:"custom",name:"Your words",emoji:"✏️",color:"#37474F"};
+const CAT_COLORS=["#37474F","#00695C","#4E342E","#6A1B9A","#AD1457","#1565C0"];
 const LEVELS={e:"Easy",m:"Medium",h:"Hard",c:""};
 const TEAM_COLORS=["#E3324F","#1F5FAD","#14935F","#7A2E8E","#E9791C","#0E7C86"];
 const TH=40, REARM=18; // degrees from the starting angle: tilt past TH to answer, return within REARM to arm the next card
@@ -329,13 +342,19 @@ const store={
   get(k,d){try{const v=localStorage.getItem("charades:"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
   set(k,v){try{localStorage.setItem("charades:"+k,JSON.stringify(v))}catch(e){}}
 };
-const DEFAULTS={teams:["Team Sun","Team Moon"],seconds:60,rounds:3,level:"any",penalty:false,sound:true,tilt:true,flip:false,themes:THEMES.map(t=>t.id),custom:""};
+const DEFAULTS={teams:["Team Sun","Team Moon"],seconds:60,rounds:3,level:"any",penalty:false,sound:true,tilt:true,flip:false,vibrate:true,themes:THEMES.map(t=>t.id),cats:[]};
 let settings=Object.assign({},DEFAULTS,store.get("settings",{}));
 const save=()=>store.set("settings",settings);
+if(settings.custom&&settings.custom.trim()){ // older versions kept a single "Your words" list
+  settings.cats.push({id:"c0",name:"Your words",emoji:"✏️",color:CAT_COLORS[0],words:splitWords(settings.custom)});
+  settings.themes.push("c0");
+}
+delete settings.custom;save();
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const words=t=>["e","m","h"].reduce((n,l)=>n+t[l].split("|").length,0);
-const customWords=()=>settings.custom.split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+const words=t=>t.words?t.words.length:["e","m","h"].reduce((n,l)=>n+t[l].split("|").length,0);
+function splitWords(s){return s.split(/[,\n]/).map(w=>w.trim()).filter(Boolean)}
+const allThemes=()=>THEMES.concat(settings.cats);
 
 let toastT;
 function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
@@ -367,15 +386,23 @@ document.querySelectorAll(".seg").forEach(seg=>seg.addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;const v=b.dataset.v;
   settings[seg.dataset.key]=isNaN(+v)?v:+v;save();renderSegs();
 }));
-["penalty","sound","tilt","flip"].forEach(k=>{const el=$("#"+k);el.checked=!!settings[k];el.onchange=()=>{settings[k]=el.checked;save();$("#tiltbox").hidden=!settings.tilt}});
+["penalty","sound","vibrate","tilt","flip"].forEach(k=>{const el=$("#"+k);el.checked=!!settings[k];el.onchange=()=>{settings[k]=el.checked;save();$("#tiltbox").hidden=!settings.tilt}});
 
 function renderThemes(){
-  $("#themes").innerHTML=THEMES.map(t=>`<label class="chip${settings.themes.includes(t.id)?" on":""}" style="--c:${t.color}"><input type="checkbox" value="${t.id}"${settings.themes.includes(t.id)?" checked":""}><span aria-hidden="true">${t.emoji}</span><span class="nm">${t.name}</span><small>${words(t)}</small></label>`).join("");
+  const box=$("#themes");box.innerHTML="";
+  allThemes().forEach(t=>{
+    const on=settings.themes.includes(t.id), l=document.createElement("label");
+    l.className="chip"+(on?" on":"");l.style.setProperty("--c",t.color);
+    l.innerHTML=`<input type="checkbox"${on?" checked":""}><span aria-hidden="true">${t.emoji}</span><span class="nm"></span><small>${words(t)}</small>`;
+    l.querySelector("input").value=t.id;l.querySelector(".nm").textContent=t.name;
+    if(t.words){const d=document.createElement("button");d.type="button";d.className="del";d.textContent="✕";d.setAttribute("aria-label","Delete "+t.name);d.dataset.del=t.id;l.append(d)}
+    box.append(l);
+  });
   updateCount();
 }
 function updateCount(){
-  const n=settings.themes.length, w=THEMES.filter(t=>settings.themes.includes(t.id)).reduce((s,t)=>s+words(t),0)+customWords().length;
-  $("#themeCount").textContent=`${n} of ${THEMES.length} themes · ${w} words`;
+  const sel=allThemes().filter(t=>settings.themes.includes(t.id)), w=sel.reduce((s,t)=>s+words(t),0);
+  $("#themeCount").textContent=`${sel.length} of ${allThemes().length} themes · ${w} words`;
 }
 $("#themes").addEventListener("change",e=>{
   const id=e.target.value;settings.themes=e.target.checked?[...settings.themes,id]:settings.themes.filter(x=>x!==id);
@@ -383,11 +410,34 @@ $("#themes").addEventListener("change",e=>{
 });
 document.querySelectorAll("[data-sel]").forEach(b=>b.onclick=()=>{
   const m=b.dataset.sel;
-  settings.themes=m==="all"?THEMES.map(t=>t.id):m==="none"?[]:shuffle(THEMES.map(t=>t.id)).slice(0,4);
+  settings.themes=m==="all"?allThemes().map(t=>t.id):m==="none"?[]:shuffle(THEMES.map(t=>t.id)).slice(0,4);
   save();renderThemes();
 });
-$("#custom").value=settings.custom;
-$("#custom").addEventListener("input",e=>{settings.custom=e.target.value;save();updateCount()});
+$("#themes").addEventListener("click",e=>{
+  const d=e.target.closest("[data-del]");if(!d)return;e.preventDefault();
+  const cat=settings.cats.find(c=>c.id===d.dataset.del);
+  settings.cats=settings.cats.filter(c=>c!==cat);settings.themes=settings.themes.filter(x=>x!==cat.id);
+  save();renderThemes();toast(`Deleted "${cat.name}"`);
+});
+
+/* ---------- New category (from setup or between turns) ---------- */
+const dlg=$("#catDlg");
+document.querySelectorAll("[data-newcat]").forEach(b=>b.onclick=()=>{
+  $("#catForm").reset();
+  if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","");
+  $("#catName").focus();
+});
+const closeDlg=()=>{if(dlg.close)dlg.close();else dlg.removeAttribute("open")};
+$("#catCancel").onclick=closeDlg;
+$("#catForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const name=$("#catName").value.trim(), list=[...new Set(splitWords($("#catWords").value))];
+  if(!name||!list.length){toast("Give the category a name and at least one word.");return}
+  const cat={id:"c"+Date.now(),name,emoji:"✏️",color:CAT_COLORS[settings.cats.length%CAT_COLORS.length],words:list};
+  settings.cats.push(cat);settings.themes.push(cat.id);save();renderThemes();closeDlg();
+  if(game){game.deck=shuffle(game.deck.concat(list.map(w=>({text:w,theme:cat,level:"c"}))))}
+  toast(`Added "${name}" with ${list.length} ${list.length===1?"word":"words"}${game?" to this game":""}.`);
+});
 
 /* ---------- Tilt sensor ---------- */
 const tilt={listening:false,angle:null,last:0,baseline:0,armed:false,samples:[],testing:false};
@@ -448,7 +498,29 @@ function beep(freqs,dur=.12,type="sine",vol=.2){
       o.connect(g).connect(ac.destination);o.start(t0+i*dur);o.stop(t0+(i+1)*dur)});
   }catch(e){}
 }
-const buzz=p=>{if(settings.sound)try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
+// iPhones have no Vibration API in any browser. On iOS 18+ toggling a hidden switch
+// control plays a short haptic tick, so pulses are approximated with those.
+let hapticLabel=null;
+function haptic(){
+  try{
+    if(!hapticLabel){
+      hapticLabel=document.createElement("label");hapticLabel.setAttribute("aria-hidden","true");hapticLabel.style.display="none";
+      const i=document.createElement("input");i.type="checkbox";i.setAttribute("switch","");i.tabIndex=-1;
+      hapticLabel.append(i);document.body.append(hapticLabel);
+    }
+    hapticLabel.click();
+  }catch(e){}
+}
+function buzz(p){
+  if(!settings.vibrate)return;
+  if(typeof navigator.vibrate==="function"){try{if(navigator.vibrate(p))return}catch(e){}}
+  const n=Array.isArray(p)?Math.ceil(p.length/2):p>=300?3:1;
+  for(let i=0;i<n;i++)setTimeout(haptic,i*110);
+}
+$("#testVib").onclick=()=>{
+  const prev=settings.vibrate;settings.vibrate=true;buzz([80,60,80]);settings.vibrate=prev;
+  if(typeof navigator.vibrate!=="function")toast("iPhone: you should feel two light taps (needs iOS 18 or later).");
+};
 let wakeLock=null;
 async function keepAwake(){try{if(!wakeLock&&navigator.wakeLock){wakeLock=await navigator.wakeLock.request("screen");wakeLock.addEventListener("release",()=>wakeLock=null)}}catch(e){}}
 async function goLandscape(){
@@ -463,14 +535,14 @@ function leaveFullscreen(){try{if(document.fullscreenElement)document.exitFullsc
 let game=null, turn=null;
 function buildDeck(){
   const out=[];
-  for(const t of THEMES){
+  for(const t of allThemes()){
     if(!settings.themes.includes(t.id))continue;
+    if(t.words){t.words.forEach(w=>out.push({text:w,theme:t,level:"c"}));continue}
     for(const l of ["e","m","h"]){
       if(settings.level!=="any"&&settings.level!==l)continue;
       t[l].split("|").forEach(w=>out.push({text:w,theme:t,level:l}));
     }
   }
-  customWords().forEach(w=>out.push({text:w,theme:CUSTOM,level:"c"}));
   return shuffle(out);
 }
 const curIdx=()=>game.turnNo%game.teams.length;
