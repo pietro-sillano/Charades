@@ -31,6 +31,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,.chip:has(input:
 
 .wrap{max-width:720px;margin:0 auto;padding-block:24px 130px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:16px}
 .hero{display:grid;gap:6px;padding-block:8px}
+.gear{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:700}
+.dlg>.card{max-height:calc(100dvh - 32px);overflow-y:auto}
 .hero h1{font-size:clamp(2.7rem,10vw,4.4rem);font-weight:800;letter-spacing:-.01em}
 .hero h1 span{color:var(--accent)}
 .hero p{color:var(--muted);max-width:54ch}
@@ -139,7 +141,7 @@ textarea{min-height:76px;resize:vertical}
 
 <div class="wrap" id="setup">
   <header class="hero">
-    <h1>Charades</h1>
+    <div class="row"><h1>Charades</h1><button class="gear" type="button" data-settings aria-label="Settings">⚙︎ Settings</button></div>
     <p>Act it out, no talking. 20 themes and over 800 words from every corner of the map, with tilt controls for phones.</p>
   </header>
 
@@ -160,20 +162,7 @@ textarea{min-height:76px;resize:vertical}
         <div class="seg" data-key="level"><button type="button" data-v="any">Any</button><button type="button" data-v="e">Easy</button><button type="button" data-v="m">Medium</button><button type="button" data-v="h">Hard</button></div>
         <p class="hint">Easy: everyday things anyone can mime. Medium: well known but trickier to act. Hard: niche names and abstract ideas.</p></div>
       <div class="field"><span class="label">Options</span>
-        <label class="check"><input type="checkbox" id="penalty"> Passing costs 1 point</label>
-        <label class="check"><input type="checkbox" id="sound"> Sounds</label>
-        <div class="row" style="justify-content:flex-start"><label class="check"><input type="checkbox" id="vibrate"> Vibration</label><button id="testVib" class="small" type="button">Test</button></div></div>
-    </div>
-  </section>
-
-  <section class="card">
-    <h2>Tilt controls</h2>
-    <label class="check"><input type="checkbox" id="tilt"> Tilt the phone to answer</label>
-    <p class="hint">The guesser holds the phone on their forehead, screen facing the team. Tilt it down (nod) when you guess right. Tilt it up to pass. The buttons keep working too.</p>
-    <div class="tiltbox" id="tiltbox">
-      <div class="meter" aria-hidden="true"><div class="z p" id="zP">↑ Pass</div><div class="z"></div><div class="z o" id="zO">Got it ↓</div><div class="needle" id="needle"></div></div>
-      <div class="row"><span class="hint" id="tiltRead">Tap Test tilt, then hold the phone upright and tip it.</span><button id="testTilt" class="small" type="button">Test tilt</button></div>
-      <label class="check"><input type="checkbox" id="flip"> Swap directions (use if down shows Pass)</label>
+        <label class="check"><input type="checkbox" id="penalty"> Passing costs 1 point</label></div>
     </div>
   </section>
 
@@ -209,7 +198,7 @@ textarea{min-height:76px;resize:vertical}
   </div>
   <button id="goTurn" class="primary" type="button" style="justify-self:center">Start turn</button>
   <section class="card"><h2>Scores</h2><ul class="scores" id="rScores"></ul></section>
-  <div class="btnrow"><button class="secondary" type="button" data-newcat>+ New category</button><button id="quit1" class="secondary" type="button">Quit game</button></div>
+  <div class="btnrow"><button class="secondary" type="button" data-newcat>+ New category</button><button class="secondary" type="button" data-settings>Settings</button><button id="quit1" class="secondary" type="button">Quit game</button></div>
 </div>
 
 <section id="play" class="play" hidden>
@@ -236,6 +225,26 @@ textarea{min-height:76px;resize:vertical}
   <section class="card"><ul class="scores" id="fScores"></ul></section>
   <div class="btnrow"><button id="again" class="primary" type="button">Play again</button><button id="toSetup" class="secondary" type="button">Change settings</button></div>
 </div>
+
+<dialog id="setDlg" class="dlg">
+  <div class="card">
+    <div class="row"><h2>Settings</h2><button class="icon" type="button" id="setClose" aria-label="Close settings">✕</button></div>
+
+    <span class="label">Sound and vibration</span>
+    <label class="check"><input type="checkbox" id="sound"> Sounds</label>
+    <div class="row"><label class="check"><input type="checkbox" id="vibrate"> Vibration</label><button id="testVib" class="small" type="button">Test vibration</button></div>
+
+    <span class="label">Tilt controls</span>
+    <label class="check"><input type="checkbox" id="tilt"> Tilt the phone to answer</label>
+    <p class="hint">The guesser holds the phone on their forehead, screen facing the team. Tilt it down (nod) when you guess right. Tilt it up to pass. The buttons keep working too.</p>
+    <div class="tiltbox" id="tiltbox">
+      <div class="meter" aria-hidden="true"><div class="z p" id="zP">↑ Pass</div><div class="z"></div><div class="z o" id="zO">Got it ↓</div><div class="needle" id="needle"></div></div>
+      <div class="row"><span class="hint" id="tiltRead">Tap Test tilt, then hold the phone upright and tip it.</span><button id="testTilt" class="small" type="button">Test tilt</button></div>
+      <label class="check"><input type="checkbox" id="flip"> Swap directions (use if down shows Pass)</label>
+    </div>
+    <div class="btnrow"><button type="button" class="primary" id="setDone" style="width:auto">Done</button></div>
+  </div>
+</dialog>
 
 <dialog id="catDlg" class="dlg">
   <form id="catForm" method="dialog" class="card">
@@ -335,6 +344,7 @@ const THEMES=[
 const CAT_COLORS=["#37474F","#00695C","#4E342E","#6A1B9A","#AD1457","#1565C0"];
 const LEVELS={e:"Easy",m:"Medium",h:"Hard",c:""};
 const TEAM_COLORS=["#E3324F","#1F5FAD","#14935F","#7A2E8E","#E9791C","#0E7C86"];
+const TEAM_NAMES=["Team Red","Team Blue","Team Green","Team Purple","Team Orange","Team Teal"];
 const TH=40, REARM=18; // degrees from the starting angle: tilt past TH to answer, return within REARM to arm the next card
 
 const $=s=>document.querySelector(s);
@@ -342,14 +352,16 @@ const store={
   get(k,d){try{const v=localStorage.getItem("charades:"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
   set(k,v){try{localStorage.setItem("charades:"+k,JSON.stringify(v))}catch(e){}}
 };
-const DEFAULTS={teams:["Team Sun","Team Moon"],seconds:60,rounds:3,level:"any",penalty:false,sound:true,tilt:true,flip:false,vibrate:true,themes:THEMES.map(t=>t.id),cats:[]};
+const DEFAULTS={teams:TEAM_NAMES.slice(0,2),seconds:60,rounds:3,level:"any",penalty:false,sound:true,tilt:true,flip:false,vibrate:true,themes:THEMES.map(t=>t.id),cats:[]};
 let settings=Object.assign({},DEFAULTS,store.get("settings",{}));
 const save=()=>store.set("settings",settings);
 if(settings.custom&&settings.custom.trim()){ // older versions kept a single "Your words" list
   settings.cats.push({id:"c0",name:"Your words",emoji:"✏️",color:CAT_COLORS[0],words:splitWords(settings.custom)});
   settings.themes.push("c0");
 }
-delete settings.custom;save();
+delete settings.custom;
+settings.teams=settings.teams.map((n,i)=>/^Team (Sun|Moon|\d+)$/.test(n)?TEAM_NAMES[i]:n); // replace old default names
+save();
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const words=t=>t.words?t.words.length:["e","m","h"].reduce((n,l)=>n+t[l].split("|").length,0);
@@ -379,7 +391,7 @@ function renderTeams(){
 }
 $("#teams").addEventListener("input",e=>{const i=+e.target.id.replace("team","");settings.teams[i]=e.target.value;save()});
 $("#teams").addEventListener("click",e=>{const b=e.target.closest("[data-rm]");if(!b)return;settings.teams.splice(+b.dataset.rm,1);save();renderTeams()});
-$("#addTeam").onclick=()=>{settings.teams.push("Team "+(settings.teams.length+1));save();renderTeams();$("#team"+(settings.teams.length-1)).select()};
+$("#addTeam").onclick=()=>{settings.teams.push(TEAM_NAMES[settings.teams.length]);save();renderTeams();$("#team"+(settings.teams.length-1)).select()};
 
 function renderSegs(){document.querySelectorAll(".seg").forEach(seg=>seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===String(settings[seg.dataset.key])))))}
 document.querySelectorAll(".seg").forEach(seg=>seg.addEventListener("click",e=>{
@@ -421,6 +433,13 @@ $("#themes").addEventListener("click",e=>{
 });
 
 /* ---------- New category (from setup or between turns) ---------- */
+const setDlg=$("#setDlg");
+const openSettings=()=>{if(setDlg.showModal)setDlg.showModal();else setDlg.setAttribute("open","")};
+const closeSettings=()=>{tilt.testing=false;if(setDlg.close)setDlg.close();else setDlg.removeAttribute("open")};
+document.querySelectorAll("[data-settings]").forEach(b=>b.onclick=openSettings);
+$("#setClose").onclick=closeSettings;$("#setDone").onclick=closeSettings;
+setDlg.addEventListener("close",()=>{tilt.testing=false;if(game&&!$("#ready").hidden)showReady()});
+
 const dlg=$("#catDlg");
 document.querySelectorAll("[data-newcat]").forEach(b=>b.onclick=()=>{
   $("#catForm").reset();
@@ -550,7 +569,7 @@ const curTeam=()=>game.teams[curIdx()];
 const roundNo=()=>Math.floor(game.turnNo/game.teams.length)+1;
 
 function newGame(){
-  game={teams:settings.teams.map((n,i)=>({name:n.trim()||"Team "+(i+1),score:0,color:TEAM_COLORS[i]})),turnNo:0,deck:buildDeck()};
+  game={teams:settings.teams.map((n,i)=>({name:n.trim()||TEAM_NAMES[i],score:0,color:TEAM_COLORS[i]})),turnNo:0,deck:buildDeck()};
   showReady();
 }
 $("#start").onclick=()=>{
